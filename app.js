@@ -20,8 +20,22 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const { notFound, errorHandler } = require("./middlewares/errorMiddleware");
 const requestContext = require("./middlewares/requestContext");
 const sanitizeRequest = require("./middlewares/sanitizeMiddleware");
+const connectDB = require("./config/db");
 
 const app = express();
+
+// Ensure DB connection before handling any request (Serverless friendly)
+app.use(async (req, res, next) => {
+  if (process.env.NODE_ENV === "test") {
+    return next();
+  }
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 const allowedOrigins = getAllowedOrigins();
 
