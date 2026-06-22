@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const compression = require("compression");
 const { getAllowedOrigins } = require("./config/env");
 
 const authRoutes = require("./routes/authRoutes");
@@ -23,6 +24,8 @@ const sanitizeRequest = require("./middlewares/sanitizeMiddleware");
 const connectDB = require("./config/db");
 
 const app = express();
+
+app.use(compression());
 
 // Ensure DB connection before handling any request (Serverless friendly)
 app.use(async (req, res, next) => {

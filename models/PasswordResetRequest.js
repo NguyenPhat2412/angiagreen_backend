@@ -17,7 +17,7 @@ const passwordResetRequestSchema = new mongoose.Schema(
       default: "requested",
       index: true,
     },
-    expiresAt: { type: Date, required: true, index: true },
+    expiresAt: { type: Date, required: true, index: true, expires: 0 },
     sentAt: { type: Date, required: true, default: Date.now, index: true },
     attempts: { type: Number, default: 0 },
     requestedIp: String,
