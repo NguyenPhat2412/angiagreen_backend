@@ -1,5 +1,6 @@
 const asyncHandler = require("../middlewares/asyncHandler");
 const Doctor = require("../models/Doctor");
+const { slugify } = require("../utils/resourceIds");
 const { escapeRegex, getPagination, parseSort, toPaginatedResponse } = require("../utils/query");
 
 const getDoctors = asyncHandler(async (req, res) => {
@@ -55,4 +56,51 @@ const getDoctorById = asyncHandler(async (req, res) => {
   res.json(doctor);
 });
 
-module.exports = { getDoctors, getDoctorById };
+const createDoctor = asyncHandler(async (req, res) => {
+  const id = req.body.id ? slugify(req.body.id, "doctor") : slugify(req.body.name, "doctor");
+  const doctor = await Doctor.create({
+    ...req.body,
+    id,
+  });
+
+  res.status(201).json(doctor);
+});
+
+const updateDoctor = asyncHandler(async (req, res) => {
+  const nextData = { ...req.body };
+
+  if (nextData.id) {
+    nextData.id = slugify(nextData.id, "doctor");
+  }
+
+  const doctor = await Doctor.findOneAndUpdate({ id: req.params.id }, nextData, {
+    new: true,
+    runValidators: true,
+  }).lean();
+
+  if (!doctor) {
+    res.status(404);
+    throw new Error("Doctor not found");
+  }
+
+  res.json(doctor);
+});
+
+const deleteDoctor = asyncHandler(async (req, res) => {
+  const doctor = await Doctor.findOneAndDelete({ id: req.params.id }).lean();
+
+  if (!doctor) {
+    res.status(404);
+    throw new Error("Doctor not found");
+  }
+
+  res.json({ id: req.params.id });
+});
+
+module.exports = {
+  createDoctor,
+  deleteDoctor,
+  getDoctors,
+  getDoctorById,
+  updateDoctor,
+};

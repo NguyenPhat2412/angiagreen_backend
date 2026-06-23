@@ -12,6 +12,7 @@ const articleSchema = new mongoose.Schema(
     tags: [String],
     publishedAt: { type: String, required: true },
     author: String,
+    status: { type: String, enum: ["draft", "published"], default: "published", index: true },
   },
   { timestamps: true }
 );

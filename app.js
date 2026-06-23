@@ -18,6 +18,7 @@ const appointmentRoutes = require("./routes/appointmentRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const contentRoutes = require("./modules/content/content.routes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 const { notFound, errorHandler } = require("./middlewares/errorMiddleware");
 const requestContext = require("./middlewares/requestContext");
 const sanitizeRequest = require("./middlewares/sanitizeMiddleware");
@@ -87,6 +88,7 @@ app.use("/api/appointments", appointmentRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

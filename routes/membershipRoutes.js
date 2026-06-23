@@ -1,14 +1,25 @@
 const express = require("express");
-const { protect } = require("../middlewares/authMiddleware");
+const { protect, requireRole } = require("../middlewares/authMiddleware");
 const {
+  createMembershipPackage,
+  deleteMembershipPackage,
+  getAllMembershipOrders,
   getMembershipLevels,
   getMembershipPackages,
   createMembershipOrder,
   getMyMembershipOrders,
   getMembershipOrderById,
+  updateMembershipOrder,
+  updateMembershipPackage,
 } = require("../controllers/membershipController");
 const validateRequest = require("../middlewares/validateRequest");
 const { idParamSchema } = require("../validations/commonSchemas");
+const {
+  membershipOrderAdminQuerySchema,
+  membershipOrderAdminUpdateSchema,
+  membershipPackageCreateSchema,
+  membershipPackageUpdateSchema,
+} = require("../validations/adminSchemas");
 const {
   createMembershipOrderSchema,
   membershipOrderListQuerySchema,
@@ -18,9 +29,14 @@ const router = express.Router();
 
 router.get("/membership-levels", getMembershipLevels);
 router.get("/membership-packages", getMembershipPackages);
+router.post("/membership-packages", protect, requireRole("admin"), validateRequest({ body: membershipPackageCreateSchema }), createMembershipPackage);
+router.put("/membership-packages/:id", protect, requireRole("admin"), validateRequest({ params: idParamSchema, body: membershipPackageUpdateSchema }), updateMembershipPackage);
+router.delete("/membership-packages/:id", protect, requireRole("admin"), validateRequest({ params: idParamSchema }), deleteMembershipPackage);
 
 router.post("/membership-orders", protect, validateRequest({ body: createMembershipOrderSchema }), createMembershipOrder);
+router.get("/membership-orders", protect, requireRole("admin"), validateRequest({ query: membershipOrderAdminQuerySchema }), getAllMembershipOrders);
 router.get("/membership-orders/my", protect, validateRequest({ query: membershipOrderListQuerySchema }), getMyMembershipOrders);
+router.patch("/membership-orders/:id", protect, requireRole("admin"), validateRequest({ params: idParamSchema, body: membershipOrderAdminUpdateSchema }), updateMembershipOrder);
 router.get("/membership-orders/:id", protect, validateRequest({ params: idParamSchema }), getMembershipOrderById);
 
 module.exports = router;

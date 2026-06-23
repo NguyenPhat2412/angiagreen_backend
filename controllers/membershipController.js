@@ -5,7 +5,8 @@ const MembershipOrder = require("../models/MembershipOrder");
 const MembershipPackage = require("../models/MembershipPackage");
 const AppError = require("../utils/AppError");
 const { createNotificationOnce } = require("../utils/notifications");
-const { getPagination, toPaginatedResponse } = require("../utils/query");
+const { escapeRegex, getPagination, toPaginatedResponse } = require("../utils/query");
+const { buildResourceIds } = require("../utils/resourceIds");
 const runInTransaction = require("../utils/runInTransaction");
 const { createPaymentUrl } = require("../utils/vnpay");
 
@@ -21,6 +22,48 @@ const getMembershipLevels = asyncHandler(async (_req, res) => {
 const getMembershipPackages = asyncHandler(async (_req, res) => {
   const packages = await MembershipPackage.find().sort({ price: 1 }).lean();
   res.json(packages);
+});
+
+const createMembershipPackage = asyncHandler(async (req, res) => {
+  const ids = buildResourceIds(req.body, "name", "membership-package");
+  const package_ = await MembershipPackage.create({
+    ...req.body,
+    id: ids.id,
+  });
+
+  res.status(201).json(package_);
+});
+
+const updateMembershipPackage = asyncHandler(async (req, res) => {
+  const nextData = { ...req.body };
+
+  if (nextData.id || nextData.name) {
+    const ids = buildResourceIds({ ...nextData, id: nextData.id || req.params.id }, "name", "membership-package");
+    nextData.id = ids.id;
+  }
+
+  const package_ = await MembershipPackage.findOneAndUpdate({ id: req.params.id }, nextData, {
+    new: true,
+    runValidators: true,
+  }).lean();
+
+  if (!package_) {
+    res.status(404);
+    throw new Error("Membership package not found");
+  }
+
+  res.json(package_);
+});
+
+const deleteMembershipPackage = asyncHandler(async (req, res) => {
+  const package_ = await MembershipPackage.findOneAndDelete({ id: req.params.id }).lean();
+
+  if (!package_) {
+    res.status(404);
+    throw new Error("Membership package not found");
+  }
+
+  res.json({ id: req.params.id });
 });
 
 const createMembershipOrder = asyncHandler(async (req, res) => {
@@ -111,8 +154,62 @@ const getMyMembershipOrders = asyncHandler(async (req, res) => {
   res.json(toPaginatedResponse(orders, { page, limit }, total));
 });
 
+const getAllMembershipOrders = asyncHandler(async (req, res) => {
+  const query = req.validated?.query || {};
+  const { page, limit, skip } = getPagination(query);
+  const filter = {};
+
+  if (query.status) {
+    filter.status = query.status;
+  }
+
+  if (query.paymentStatus) {
+    filter.paymentStatus = query.paymentStatus;
+  }
+
+  if (query.search) {
+    const safeSearch = escapeRegex(query.search);
+    filter.$or = [
+      { id: { $regex: safeSearch, $options: "i" } },
+      { userId: { $regex: safeSearch, $options: "i" } },
+      { packageId: { $regex: safeSearch, $options: "i" } },
+      { transactionNo: { $regex: safeSearch, $options: "i" } },
+      { "shippingAddress.name": { $regex: safeSearch, $options: "i" } },
+      { "shippingAddress.phone": { $regex: safeSearch, $options: "i" } },
+    ];
+  }
+
+  const [orders, total] = await Promise.all([
+    MembershipOrder.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+    MembershipOrder.countDocuments(filter),
+  ]);
+
+  res.json(toPaginatedResponse(orders, { page, limit }, total));
+});
+
 const getMembershipOrderById = asyncHandler(async (req, res) => {
-  const order = await MembershipOrder.findOne({ id: req.params.id, userId: req.user.id }).lean();
+  const filter = req.user.role === "admin" ? { id: req.params.id } : { id: req.params.id, userId: req.user.id };
+  const order = await MembershipOrder.findOne(filter).lean();
+  if (!order) {
+    res.status(404);
+    throw new Error("Membership order not found");
+  }
+
+  res.json(order);
+});
+
+const updateMembershipOrder = asyncHandler(async (req, res) => {
+  const nextData = { ...req.body };
+
+  if (nextData.paymentStatus === "paid" && !nextData.paidAt) {
+    nextData.paidAt = new Date();
+  }
+
+  const order = await MembershipOrder.findOneAndUpdate({ id: req.params.id }, nextData, {
+    new: true,
+    runValidators: true,
+  }).lean();
+
   if (!order) {
     res.status(404);
     throw new Error("Membership order not found");
@@ -122,9 +219,14 @@ const getMembershipOrderById = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  createMembershipPackage,
   getMembershipLevels,
   getMembershipPackages,
+  deleteMembershipPackage,
   createMembershipOrder,
+  getAllMembershipOrders,
   getMyMembershipOrders,
   getMembershipOrderById,
+  updateMembershipOrder,
+  updateMembershipPackage,
 };

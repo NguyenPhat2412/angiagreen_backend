@@ -19,6 +19,7 @@ const contentPageSchema = new mongoose.Schema(
     description: { type: localizedTextSchema, required: true },
     badge: { type: String, default: "" },
     icon: { type: String, default: "FileText" },
+    imageUrl: { type: String, default: "" },
     order: { type: Number, default: 0 },
     status: { type: String, enum: ["draft", "published"], default: "published", index: true },
     highlights: [

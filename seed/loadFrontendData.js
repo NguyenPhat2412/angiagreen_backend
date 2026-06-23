@@ -4,7 +4,7 @@ const vm = require("vm");
 const ts = require("typescript");
 
 const loadFrontendData = () => {
-  const dataPath = path.resolve(__dirname, "../../angiagreen/lib/data.ts");
+  const dataPath = path.resolve(__dirname, "./data.ts");
   const source = fs.readFileSync(dataPath, "utf8");
   const output = ts.transpileModule(source, {
     compilerOptions: {

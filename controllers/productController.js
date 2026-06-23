@@ -2,6 +2,7 @@ const asyncHandler = require("../middlewares/asyncHandler");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 const Review = require("../models/Review");
+const { buildResourceIds } = require("../utils/resourceIds");
 const { escapeRegex, getPagination, parseSort, toPaginatedResponse } = require("../utils/query");
 
 const getProducts = asyncHandler(async (req, res) => {
@@ -112,10 +113,57 @@ const createProductReview = asyncHandler(async (req, res) => {
   res.status(201).json(review);
 });
 
+const createProduct = asyncHandler(async (req, res) => {
+  const ids = buildResourceIds(req.body, "name", "product");
+  const product = await Product.create({
+    ...req.body,
+    id: ids.id,
+    slug: ids.slug,
+  });
+
+  res.status(201).json(product);
+});
+
+const updateProduct = asyncHandler(async (req, res) => {
+  const nextData = { ...req.body };
+
+  if (nextData.id || nextData.slug || nextData.name) {
+    const ids = buildResourceIds({ ...nextData, id: nextData.id || req.params.id }, "name", "product");
+    nextData.id = ids.id;
+    nextData.slug = ids.slug;
+  }
+
+  const product = await Product.findOneAndUpdate({ id: req.params.id }, nextData, {
+    new: true,
+    runValidators: true,
+  }).lean();
+
+  if (!product) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+  res.json(product);
+});
+
+const deleteProduct = asyncHandler(async (req, res) => {
+  const product = await Product.findOneAndDelete({ id: req.params.id }).lean();
+
+  if (!product) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+  res.json({ id: req.params.id });
+});
+
 module.exports = {
+  createProduct,
+  createProductReview,
+  deleteProduct,
   getProducts,
   getProductsByIds,
   getProductBySlug,
   getProductReviews,
-  createProductReview,
+  updateProduct,
 };
