@@ -1,9 +1,9 @@
 const MembershipOrder = require("../models/MembershipOrder");
 const Order = require("../models/Order");
 const OrderStatusHistory = require("../models/OrderStatusHistory");
-const User = require("../models/User");
 const { createNotificationOnce } = require("../utils/notifications");
 const runInTransaction = require("../utils/runInTransaction");
+const { activateMembershipOrder } = require("./membership.service");
 
 const getTransactionNo = (params) =>
   params.vnp_TransactionNo || params.vnp_BankTranNo || params.vnp_TxnRef;
@@ -17,14 +17,6 @@ const getPaymentRaw = (params) => ({
   payDate: params.vnp_PayDate,
   amount: params.vnp_Amount ? Number(params.vnp_Amount) / 100 : undefined,
 });
-
-const getMembershipLevelFromPackage = (packageId) => {
-  if (packageId.includes("diamond")) return "diamond";
-  if (packageId.includes("platinum")) return "platinum";
-  if (packageId.includes("gold")) return "gold";
-  if (packageId.includes("silver")) return "silver";
-  return "member";
-};
 
 const markProductPayment = async ({ orderId, isSuccess, queryParams }) =>
   runInTransaction(async (session) => {
@@ -135,12 +127,11 @@ const markMembershipPayment = async ({ orderId, isSuccess, queryParams }) =>
         membershipOrder.paymentRaw = paymentRaw;
         await membershipOrder.save({ session });
 
-        const user = await User.findOne({ id: membershipOrder.userId }).session(session || null);
-        if (user) {
-          user.membershipLevel = getMembershipLevelFromPackage(membershipOrder.packageId);
-          user.points = (user.points || 0) + Math.floor(membershipOrder.price / 10000);
-          await user.save({ session });
-        }
+        await activateMembershipOrder({
+          orderId: membershipOrder.id,
+          actorId: "system",
+          session,
+        });
 
         await createNotificationOnce(
           {

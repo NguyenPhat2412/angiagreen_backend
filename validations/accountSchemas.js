@@ -4,6 +4,7 @@ const { addressSchema } = require("./commonSchemas");
 const updateMeSchema = z
   .object({
     name: z.string().trim().min(1).max(120).optional(),
+    email: z.string().trim().email().max(255).toLowerCase().optional(),
     phone: z.string().trim().max(20).optional(),
     avatar: z.string().trim().max(500).optional(),
   })

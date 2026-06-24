@@ -50,6 +50,7 @@ const productPayloadSchema = z
     id: z.string().trim().max(120).optional(),
     name: localizedTextSchema,
     slug: z.string().trim().max(160).optional(),
+    sku: z.string().trim().max(120).optional(),
     categoryId: z.string().trim().min(1).max(120),
     price: z.coerce.number().min(0),
     originalPrice: z.coerce.number().min(0).optional(),
@@ -96,6 +97,16 @@ const articlePayloadSchema = z
   })
   .strict();
 
+const doctorWorkingHourSchema = z
+  .object({
+    dayOfWeek: z.coerce.number().int().min(0).max(6),
+    startTime: z.string().trim().min(1).max(20),
+    endTime: z.string().trim().min(1).max(20),
+    type: z.enum(["online", "offline"]),
+    isActive: z.boolean().optional(),
+  })
+  .strict();
+
 const doctorPayloadSchema = z
   .object({
     id: z.string().trim().max(120).optional(),
@@ -105,6 +116,7 @@ const doctorPayloadSchema = z
     experience: z.coerce.number().int().min(0).max(80),
     image: z.string().trim().min(1).max(1000),
     consultationType: z.array(z.enum(["online", "offline"])).default([]),
+    workingHours: z.array(doctorWorkingHourSchema).optional(),
     nextAvailable: z.string().trim().max(120).optional(),
     rating: z.coerce.number().min(0).max(5).optional(),
   })
@@ -118,6 +130,7 @@ const membershipPackagePayloadSchema = z
     description: localizedTextSchema,
     benefits: z.array(localizedTextSchema).default([]),
     image: z.string().trim().min(1).max(1000),
+    durationDays: z.coerce.number().int().min(1).max(3650).optional(),
     featured: z.boolean().optional(),
   })
   .strict();
@@ -191,21 +204,25 @@ const contentPagePayloadSchema = z
   .strict();
 
 const orderAdminQuerySchema = paginationQuerySchema.extend({
-  status: z.enum(["pending", "confirmed", "shipping", "delivered", "cancelled"]).optional(),
+  status: z.enum(["pending", "confirmed", "shipping", "delivered", "cancelled", "failed", "returned"]).optional(),
   paymentStatus: z.enum(["unpaid", "pending", "paid", "failed", "refunded"]).optional(),
+  shippingStatus: z.enum(["pending", "shipping", "delivered", "failed", "returned"]).optional(),
 });
 
 const orderAdminUpdateSchema = z
   .object({
-    status: z.enum(["pending", "confirmed", "shipping", "delivered", "cancelled"]).optional(),
+    status: z.enum(["pending", "confirmed", "shipping", "delivered", "cancelled", "failed", "returned"]).optional(),
     paymentStatus: z.enum(["unpaid", "pending", "paid", "failed", "refunded"]).optional(),
+    shippingStatus: z.enum(["pending", "shipping", "delivered", "failed", "returned"]).optional(),
+    shippingFailureReason: z.string().trim().max(500).optional(),
+    shippingResolution: z.string().trim().max(500).optional(),
     transactionNo: z.string().trim().max(120).optional(),
     note: z.string().trim().max(1000).optional(),
   })
   .strict();
 
 const appointmentAdminQuerySchema = paginationQuerySchema.extend({
-  status: z.enum(["pending", "confirmed", "completed", "cancelled"]).optional(),
+  status: z.enum(["pending", "confirmed", "completed", "cancelled", "rejected", "rescheduled"]).optional(),
   doctorId: z.string().trim().max(120).optional(),
 });
 
@@ -219,7 +236,8 @@ const appointmentAdminUpdateSchema = z
     contactName: z.string().trim().max(120).optional(),
     contactPhone: z.string().trim().max(20).optional(),
     contactEmail: z.string().trim().email().max(255).optional(),
-    status: z.enum(["pending", "confirmed", "completed", "cancelled"]).optional(),
+    status: z.enum(["pending", "confirmed", "completed", "cancelled", "rejected", "rescheduled"]).optional(),
+    rejectionReason: z.string().trim().max(500).optional(),
     note: z.string().trim().max(1000).optional(),
   })
   .strict();
@@ -227,6 +245,10 @@ const appointmentAdminUpdateSchema = z
 const membershipOrderAdminQuerySchema = paginationQuerySchema.extend({
   status: z.enum(["pending", "completed", "cancelled"]).optional(),
   paymentStatus: z.enum(["unpaid", "pending", "paid", "failed", "refunded"]).optional(),
+});
+
+const membershipSubscriptionAdminQuerySchema = paginationQuerySchema.extend({
+  status: z.enum(["active", "expired", "cancelled", "pending_payment"]).optional(),
 });
 
 const membershipOrderAdminUpdateSchema = z
@@ -268,6 +290,7 @@ module.exports = {
   doctorUpdateSchema: makeUpdateSchema(doctorPayloadSchema),
   membershipOrderAdminQuerySchema,
   membershipOrderAdminUpdateSchema,
+  membershipSubscriptionAdminQuerySchema,
   membershipPackageCreateSchema: membershipPackagePayloadSchema,
   membershipPackageUpdateSchema: makeUpdateSchema(membershipPackagePayloadSchema),
   orderAdminQuerySchema,

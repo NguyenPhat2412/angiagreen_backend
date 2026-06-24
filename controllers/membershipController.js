@@ -3,12 +3,14 @@ const asyncHandler = require("../middlewares/asyncHandler");
 const MembershipLevel = require("../models/MembershipLevel");
 const MembershipOrder = require("../models/MembershipOrder");
 const MembershipPackage = require("../models/MembershipPackage");
+const MembershipSubscription = require("../models/MembershipSubscription");
 const AppError = require("../utils/AppError");
 const { createNotificationOnce } = require("../utils/notifications");
 const { escapeRegex, getPagination, toPaginatedResponse } = require("../utils/query");
 const { buildResourceIds } = require("../utils/resourceIds");
 const runInTransaction = require("../utils/runInTransaction");
 const { createPaymentUrl } = require("../utils/vnpay");
+const { activateMembershipOrder } = require("../services/membership.service");
 
 const createMembershipOrderId = () => `MEM-${Date.now()}-${randomUUID().slice(0, 8).toUpperCase()}`;
 
@@ -154,6 +156,38 @@ const getMyMembershipOrders = asyncHandler(async (req, res) => {
   res.json(toPaginatedResponse(orders, { page, limit }, total));
 });
 
+const getMyMembershipSubscriptions = asyncHandler(async (req, res) => {
+  const subscriptions = await MembershipSubscription.find({ userId: req.user.id }).sort({ createdAt: -1 }).lean();
+  res.json(subscriptions);
+});
+
+const getAllMembershipSubscriptions = asyncHandler(async (req, res) => {
+  const query = req.validated?.query || {};
+  const { page, limit, skip } = getPagination(query);
+  const filter = {};
+
+  if (query.status) {
+    filter.status = query.status;
+  }
+
+  if (query.search) {
+    const safeSearch = escapeRegex(query.search);
+    filter.$or = [
+      { id: { $regex: safeSearch, $options: "i" } },
+      { userId: { $regex: safeSearch, $options: "i" } },
+      { packageId: { $regex: safeSearch, $options: "i" } },
+      { orderId: { $regex: safeSearch, $options: "i" } },
+    ];
+  }
+
+  const [subscriptions, total] = await Promise.all([
+    MembershipSubscription.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+    MembershipSubscription.countDocuments(filter),
+  ]);
+
+  res.json(toPaginatedResponse(subscriptions, { page, limit }, total));
+});
+
 const getAllMembershipOrders = asyncHandler(async (req, res) => {
   const query = req.validated?.query || {};
   const { page, limit, skip } = getPagination(query);
@@ -208,14 +242,22 @@ const updateMembershipOrder = asyncHandler(async (req, res) => {
   const order = await MembershipOrder.findOneAndUpdate({ id: req.params.id }, nextData, {
     new: true,
     runValidators: true,
-  }).lean();
+  });
 
   if (!order) {
     res.status(404);
     throw new Error("Membership order not found");
   }
 
-  res.json(order);
+  if (["completed"].includes(order.status) || order.paymentStatus === "paid") {
+    await activateMembershipOrder({
+      orderId: order.id,
+      actorId: req.user.id,
+    });
+  }
+
+  const updatedOrder = await MembershipOrder.findOne({ id: order.id }).lean();
+  res.json(updatedOrder);
 });
 
 module.exports = {
@@ -225,7 +267,9 @@ module.exports = {
   deleteMembershipPackage,
   createMembershipOrder,
   getAllMembershipOrders,
+  getAllMembershipSubscriptions,
   getMyMembershipOrders,
+  getMyMembershipSubscriptions,
   getMembershipOrderById,
   updateMembershipOrder,
   updateMembershipPackage,

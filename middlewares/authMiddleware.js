@@ -26,6 +26,10 @@ const protect = asyncHandler(async (req, _res, next) => {
     throw new AppError("Không có quyền truy cập, không tìm thấy người dùng", 401, "AUTH_USER_NOT_FOUND");
   }
 
+  if (user.status && user.status !== "active") {
+    throw new AppError("Account is locked or disabled", 403, "ACCOUNT_INACTIVE");
+  }
+
   req.user = user;
   next();
 });

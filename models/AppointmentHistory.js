@@ -7,7 +7,7 @@ const appointmentHistorySchema = new mongoose.Schema(
     appointmentId: { type: String, required: true, index: true },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "completed", "cancelled"],
+      enum: ["pending", "confirmed", "completed", "cancelled", "rejected", "rescheduled"],
       required: true,
     },
     note: String,

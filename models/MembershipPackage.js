@@ -8,6 +8,7 @@ const membershipPackageSchema = new mongoose.Schema(
     description: { type: mongoose.Schema.Types.Mixed, required: true },
     benefits: [{ type: mongoose.Schema.Types.Mixed }],
     image: { type: String, required: true },
+    durationDays: { type: Number, default: 30, min: 1 },
     featured: { type: Boolean, default: false },
   },
   { timestamps: true }

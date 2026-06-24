@@ -9,6 +9,15 @@ const doctorSchema = new mongoose.Schema(
     experience: { type: Number, required: true },
     image: { type: String, required: true },
     consultationType: [{ type: String, enum: ["online", "offline"] }],
+    workingHours: [
+      {
+        dayOfWeek: { type: Number, min: 0, max: 6 },
+        startTime: String,
+        endTime: String,
+        type: { type: String, enum: ["online", "offline"] },
+        isActive: { type: Boolean, default: true },
+      },
+    ],
     nextAvailable: String,
     rating: Number,
   },

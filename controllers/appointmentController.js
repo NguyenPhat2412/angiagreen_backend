@@ -116,10 +116,24 @@ const createAppointment = asyncHandler(async (req, res) => {
 
 const updateAppointment = asyncHandler(async (req, res) => {
   const nextData = { ...req.body };
+  const existingAppointment = await Appointment.findOne({ id: req.params.id }).lean();
+
+  if (!existingAppointment) {
+    res.status(404);
+    throw new Error("Appointment not found");
+  }
 
   if (nextData.doctorId) {
     const doctor = await Doctor.findOne({ id: nextData.doctorId }).lean();
     nextData.doctorName = doctor?.name;
+  }
+
+  if (nextData.status === "rescheduled" || (nextData.date && nextData.date !== existingAppointment.date) || (nextData.time && nextData.time !== existingAppointment.time)) {
+    nextData.rescheduledFrom = {
+      date: existingAppointment.date,
+      time: existingAppointment.time,
+    };
+    nextData.status = nextData.status || "rescheduled";
   }
 
   const appointment = await Appointment.findOneAndUpdate({ id: req.params.id }, nextData, {

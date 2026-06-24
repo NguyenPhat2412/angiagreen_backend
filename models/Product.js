@@ -5,6 +5,7 @@ const productSchema = new mongoose.Schema(
     id: { type: String, required: true, unique: true },
     name: { type: mongoose.Schema.Types.Mixed, required: true },
     slug: { type: String, required: true, unique: true },
+    sku: { type: String, trim: true, index: true },
     categoryId: { type: String, required: true, index: true },
     price: { type: Number, required: true },
     originalPrice: Number,

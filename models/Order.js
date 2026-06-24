@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const orderItemSchema = new mongoose.Schema(
   {
     productId: { type: String, required: true },
+    categoryId: String,
     productName: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
     price: { type: Number, required: true },
@@ -32,12 +33,14 @@ const orderSchema = new mongoose.Schema(
     items: { type: [orderItemSchema], required: true },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "shipping", "delivered", "cancelled"],
+      enum: ["pending", "confirmed", "shipping", "delivered", "cancelled", "failed", "returned"],
       default: "pending",
     },
     totalAmount: { type: Number, required: true },
     shippingFee: { type: Number, default: 0 },
     discount: { type: Number, default: 0 },
+    voucherCode: String,
+    voucherId: String,
     paymentMethod: {
       type: String,
       enum: ["cod", "bank", "vnpay"],
@@ -58,7 +61,17 @@ const orderSchema = new mongoose.Schema(
     paidAt: Date,
     paymentRaw: mongoose.Schema.Types.Mixed,
     shippingAddress: { type: addressSchema, required: true },
+    shippingStatus: {
+      type: String,
+      enum: ["pending", "shipping", "delivered", "failed", "returned"],
+      default: "pending",
+      index: true,
+    },
+    shippingFailureReason: String,
+    shippingResolution: String,
     note: String,
+    cancelledAt: Date,
+    cancelReason: String,
   },
   { timestamps: true }
 );

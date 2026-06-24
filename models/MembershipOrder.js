@@ -40,6 +40,7 @@ const membershipOrderSchema = new mongoose.Schema(
       ward: String,
     },
     note: String,
+    subscriptionId: String,
   },
   { timestamps: true }
 );

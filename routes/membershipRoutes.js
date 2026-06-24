@@ -4,10 +4,12 @@ const {
   createMembershipPackage,
   deleteMembershipPackage,
   getAllMembershipOrders,
+  getAllMembershipSubscriptions,
   getMembershipLevels,
   getMembershipPackages,
   createMembershipOrder,
   getMyMembershipOrders,
+  getMyMembershipSubscriptions,
   getMembershipOrderById,
   updateMembershipOrder,
   updateMembershipPackage,
@@ -17,6 +19,7 @@ const { idParamSchema } = require("../validations/commonSchemas");
 const {
   membershipOrderAdminQuerySchema,
   membershipOrderAdminUpdateSchema,
+  membershipSubscriptionAdminQuerySchema,
   membershipPackageCreateSchema,
   membershipPackageUpdateSchema,
 } = require("../validations/adminSchemas");
@@ -38,5 +41,7 @@ router.get("/membership-orders", protect, requireRole("admin"), validateRequest(
 router.get("/membership-orders/my", protect, validateRequest({ query: membershipOrderListQuerySchema }), getMyMembershipOrders);
 router.patch("/membership-orders/:id", protect, requireRole("admin"), validateRequest({ params: idParamSchema, body: membershipOrderAdminUpdateSchema }), updateMembershipOrder);
 router.get("/membership-orders/:id", protect, validateRequest({ params: idParamSchema }), getMembershipOrderById);
+router.get("/membership-subscriptions", protect, requireRole("admin"), validateRequest({ query: membershipSubscriptionAdminQuerySchema }), getAllMembershipSubscriptions);
+router.get("/membership-subscriptions/my", protect, getMyMembershipSubscriptions);
 
 module.exports = router;

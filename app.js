@@ -10,18 +10,26 @@ const accountRoutes = require("./modules/account/account.routes");
 const userRoutes = require("./routes/userRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const productRoutes = require("./routes/productRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 const articleRoutes = require("./routes/articleRoutes");
 const doctorRoutes = require("./routes/doctorRoutes");
+const doctorScheduleRoutes = require("./routes/doctorScheduleRoutes");
 const membershipRoutes = require("./routes/membershipRoutes");
 const orderRoutes = require("./routes/orderRoutes");
+const cartRoutes = require("./routes/cartRoutes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const inventoryRoutes = require("./routes/inventoryRoutes");
 const contentRoutes = require("./modules/content/content.routes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const voucherRoutes = require("./routes/voucherRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const rbacRoutes = require("./routes/rbacRoutes");
+const auditRoutes = require("./routes/auditRoutes");
 const { notFound, errorHandler } = require("./middlewares/errorMiddleware");
 const requestContext = require("./middlewares/requestContext");
 const sanitizeRequest = require("./middlewares/sanitizeMiddleware");
+const auditMiddleware = require("./middlewares/auditMiddleware");
 const connectDB = require("./config/db");
 
 const app = express();
@@ -66,6 +74,7 @@ app.use(
 );
 app.use(express.json({ limit: "5mb" }));
 app.use(sanitizeRequest);
+app.use(auditMiddleware);
 
 if (process.env.NODE_ENV !== "test") {
   app.use(morgan("dev"));
@@ -80,15 +89,22 @@ app.use("/api/users/me", accountRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/reviews", reviewRoutes);
 app.use("/api/articles", articleRoutes);
 app.use("/api/doctors", doctorRoutes);
+app.use("/api/doctor-schedules", doctorScheduleRoutes);
 app.use("/api", membershipRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/cart", cartRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/inventory", inventoryRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/vouchers", voucherRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/admin/rbac", rbacRoutes);
+app.use("/api/audit-logs", auditRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -69,7 +69,7 @@ const getProductBySlug = asyncHandler(async (req, res) => {
 });
 
 const getProductReviews = asyncHandler(async (req, res) => {
-  const reviews = await Review.find({ productId: req.params.id }).sort({ createdAt: -1 }).lean();
+  const reviews = await Review.find({ productId: req.params.id, status: "approved" }).sort({ createdAt: -1 }).lean();
   res.json(reviews);
 });
 
@@ -108,6 +108,7 @@ const createProductReview = asyncHandler(async (req, res) => {
     productId: product.id,
     rating,
     comment,
+    status: "pending",
   });
 
   res.status(201).json(review);

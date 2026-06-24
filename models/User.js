@@ -37,6 +37,7 @@ const userSchema = new mongoose.Schema(
     avatar: String,
     password: { type: String, required: true, minlength: 6, select: false },
     role: { type: String, enum: ["customer", "doctor", "admin"], default: "customer" },
+    status: { type: String, enum: ["active", "locked", "disabled"], default: "active", index: true },
     membershipLevel: {
       type: String,
       enum: ["member", "silver", "gold", "platinum", "diamond"],

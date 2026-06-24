@@ -13,16 +13,24 @@ const createOrderSchema = z
     items: z.array(orderItemSchema).min(1).max(50),
     shippingAddress: addressSchema,
     paymentMethod: z.enum(["cod", "bank", "vnpay"]),
+    voucherCode: z.string().trim().max(80).optional(),
     note: z.string().trim().max(1000).optional(),
     returnUrl: z.string().trim().url().optional(),
   })
   .strict();
 
 const orderListQuerySchema = paginationQuerySchema.extend({
-  status: z.enum(["pending", "confirmed", "shipping", "delivered", "cancelled"]).optional(),
+  status: z.enum(["pending", "confirmed", "shipping", "delivered", "cancelled", "failed", "returned"]).optional(),
 });
 
+const cancelOrderSchema = z
+  .object({
+    reason: z.string().trim().max(500).optional(),
+  })
+  .strict();
+
 module.exports = {
+  cancelOrderSchema,
   createOrderSchema,
   orderListQuerySchema,
 };

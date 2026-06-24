@@ -4,7 +4,7 @@ const User = require("../../models/User");
 const toSafeUser = require("../../utils/toSafeUser");
 
 const updateMe = asyncHandler(async (req, res) => {
-  const allowedFields = ["name", "phone", "avatar"];
+  const allowedFields = ["name", "email", "phone", "avatar"];
   const update = {};
 
   allowedFields.forEach((field) => {
@@ -12,6 +12,14 @@ const updateMe = asyncHandler(async (req, res) => {
       update[field] = req.body[field];
     }
   });
+
+  if (update.email && update.email !== req.user.email) {
+    const existingUser = await User.findOne({ email: update.email, id: { $ne: req.user.id } }).lean();
+    if (existingUser) {
+      res.status(409);
+      throw new Error("Email already exists");
+    }
+  }
 
   const user = await User.findOneAndUpdate({ id: req.user.id }, update, {
     new: true,

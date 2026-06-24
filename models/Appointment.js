@@ -16,9 +16,14 @@ const appointmentSchema = new mongoose.Schema(
     contactEmail: String,
     status: {
       type: String,
-      enum: ["pending", "confirmed", "completed", "cancelled"],
+      enum: ["pending", "confirmed", "completed", "cancelled", "rejected", "rescheduled"],
       default: "pending",
     },
+    rescheduledFrom: {
+      date: String,
+      time: String,
+    },
+    rejectionReason: String,
     note: String,
   },
   { timestamps: true }

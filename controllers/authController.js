@@ -1,11 +1,13 @@
 const crypto = require("crypto");
 const asyncHandler = require("../middlewares/asyncHandler");
 const PasswordResetRequest = require("../models/PasswordResetRequest");
+const RefreshToken = require("../models/RefreshToken");
 const User = require("../models/User");
 const { getNumberEnv, requireEnv } = require("../config/env");
 const { sendPasswordResetOtp } = require("../utils/mailer");
 const generateToken = require("../utils/generateToken");
 const toSafeUser = require("../utils/toSafeUser");
+const { createAuthPayload, createRefreshToken, hashToken } = require("../utils/tokens");
 
 const RESET_MESSAGE =
   "If the email exists, password reset instructions will be sent.";
@@ -45,7 +47,8 @@ const register = asyncHandler(async (req, res) => {
   }
 
   const user = await User.create({ name, email: normalizedEmail, phone, password });
-  res.status(201).json({ user: toSafeUser(user), token: generateToken(user) });
+  const authPayload = await createAuthPayload({ user, req });
+  res.status(201).json({ user: toSafeUser(user), ...authPayload });
 });
 
 const login = asyncHandler(async (req, res) => {
@@ -63,7 +66,86 @@ const login = asyncHandler(async (req, res) => {
     throw new Error("Invalid email or password");
   }
 
-  res.json({ user: toSafeUser(user), token: generateToken(user) });
+  if (user.status && user.status !== "active") {
+    res.status(403);
+    throw new Error("Account is not active");
+  }
+
+  const authPayload = await createAuthPayload({ user, req });
+  res.json({ user: toSafeUser(user), ...authPayload });
+});
+
+const adminLogin = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  const normalizedEmail = normalizeEmail(email);
+
+  const user = await User.findOne({ email: normalizedEmail }).select("+password");
+  if (!user || !(await user.matchPassword(password))) {
+    res.status(401);
+    throw new Error("Invalid email or password");
+  }
+
+  if (user.role !== "admin") {
+    res.status(403);
+    throw new Error("Admin account is required");
+  }
+
+  if (user.status && user.status !== "active") {
+    res.status(403);
+    throw new Error("Account is not active");
+  }
+
+  const authPayload = await createAuthPayload({ user, req });
+  res.json({ user: toSafeUser(user), ...authPayload });
+});
+
+const refresh = asyncHandler(async (req, res) => {
+  const refreshToken = String(req.body.refreshToken || "").trim();
+  const tokenHash = hashToken(refreshToken);
+  const storedToken = await RefreshToken.findOne({
+    tokenHash,
+    revokedAt: { $exists: false },
+    expiresAt: { $gt: new Date() },
+  });
+
+  if (!storedToken) {
+    res.status(401);
+    throw new Error("Refresh token is invalid or expired");
+  }
+
+  const user = await User.findOne({ id: storedToken.userId }).select("-password");
+  if (!user || (user.status && user.status !== "active")) {
+    res.status(401);
+    throw new Error("User is not active");
+  }
+
+  storedToken.revokedAt = new Date();
+  const nextRefresh = await createRefreshToken({ userId: user.id, req, replacedByTokenHash: tokenHash });
+  storedToken.replacedByTokenHash = nextRefresh.tokenHash;
+  await storedToken.save();
+
+  const accessToken = generateToken(user);
+  res.json({
+    user: toSafeUser(user),
+    token: accessToken,
+    accessToken,
+    accessTokenExpiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "15m",
+    refreshToken: nextRefresh.token,
+    refreshTokenExpiresAt: nextRefresh.expiresAt,
+  });
+});
+
+const logout = asyncHandler(async (req, res) => {
+  const refreshToken = String(req.body.refreshToken || "").trim();
+
+  if (refreshToken) {
+    await RefreshToken.findOneAndUpdate(
+      { tokenHash: hashToken(refreshToken), userId: req.user.id },
+      { revokedAt: new Date() }
+    );
+  }
+
+  res.json({ message: "Logged out successfully" });
 });
 
 const me = asyncHandler(async (req, res) => {
@@ -178,4 +260,4 @@ const resetPassword = asyncHandler(async (req, res) => {
   res.json({ message: "Password has been reset successfully." });
 });
 
-module.exports = { register, login, me, forgotPassword, resetPassword };
+module.exports = { adminLogin, register, login, logout, me, forgotPassword, refresh, resetPassword };

@@ -8,6 +8,12 @@ const reviewSchema = new mongoose.Schema(
     productId: { type: String, required: true, index: true },
     rating: { type: Number, required: true, min: 1, max: 5 },
     comment: String,
+    status: { type: String, enum: ["pending", "approved", "hidden", "rejected"], default: "pending", index: true },
+    reply: String,
+    repliedBy: String,
+    repliedAt: Date,
+    moderatedBy: String,
+    moderatedAt: Date,
   },
   { timestamps: true }
 );

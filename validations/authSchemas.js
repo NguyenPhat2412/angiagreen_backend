@@ -21,13 +21,23 @@ const forgotPasswordSchema = z.object({
 
 const resetPasswordSchema = z.object({
   email: emailSchema,
-  otp: z.string().trim().regex(/^\d{6}$/, "OTP phải gồm 6 chữ số"),
+  otp: z.string().trim().regex(/^\d{6}$/, "OTP must contain 6 digits"),
   password: passwordSchema,
+});
+
+const refreshTokenSchema = z.object({
+  refreshToken: z.string().trim().min(20),
+});
+
+const logoutSchema = z.object({
+  refreshToken: z.string().trim().min(20).optional(),
 });
 
 module.exports = {
   forgotPasswordSchema,
   loginSchema,
+  logoutSchema,
+  refreshTokenSchema,
   registerSchema,
   resetPasswordSchema,
 };
